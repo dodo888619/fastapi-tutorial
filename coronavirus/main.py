@@ -31,8 +31,7 @@ def get_db():
 
 @application.post("/create_city", response_model=schemas.ReadCity)
 def create_city(city: schemas.CreateCity, db: Session = Depends(get_db)):
-    db_city = crud.get_city_by_name(db, name=city.province)
-    if db_city:
+    if db_city := crud.get_city_by_name(db, name=city.province):
         raise HTTPException(status_code=400, detail="City already registered")
     return crud.create_city(db=db, city=city)
 
@@ -47,8 +46,7 @@ def get_city(city: str, db: Session = Depends(get_db)):
 
 @application.get("/get_cities", response_model=List[schemas.ReadCity])
 def get_cities(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    cities = crud.get_cities(db, skip=skip, limit=limit)
-    return cities
+    return crud.get_cities(db, skip=skip, limit=limit)
 
 
 @application.post("/create_data", response_model=schemas.ReadData)
@@ -60,8 +58,7 @@ def create_data_for_city(city: str, data: schemas.CreateData, db: Session = Depe
 
 @application.get("/get_data")
 def get_data(city: str = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    data = crud.get_data(db, city=city, skip=skip, limit=limit)
-    return data
+    return crud.get_data(db, city=city, skip=skip, limit=limit)
 
 
 def bg_task(url: HttpUrl, db: Session):
@@ -69,7 +66,7 @@ def bg_task(url: HttpUrl, db: Session):
 
     city_data = requests.get(url=f"{url}?source=jhu&country_code=CN&timelines=false")
 
-    if 200 == city_data.status_code:
+    if city_data.status_code == 200:
         db.query(City).delete()  # 同步数据前先清空原有的数据
         for location in city_data.json()["locations"]:
             city = {
@@ -82,7 +79,7 @@ def bg_task(url: HttpUrl, db: Session):
 
     coronavirus_data = requests.get(url=f"{url}?source=jhu&country_code=CN&timelines=true")
 
-    if 200 == coronavirus_data.status_code:
+    if coronavirus_data.status_code == 200:
         db.query(Data).delete()
         for city in coronavirus_data.json()["locations"]:
             db_city = crud.get_city_by_name(db=db, name=city["province"])

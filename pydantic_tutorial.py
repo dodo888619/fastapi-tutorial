@@ -46,7 +46,7 @@ print(user.dict())
 
 print("\033[31m2. --- 校验失败处理 ---\033[0m")
 try:
-    User(id=1, signup_ts=datetime.today(), friends=[1, 2, "not number"])
+    User(id=1, signup_ts=datetime.now(), friends=[1, 2, "not number"])
 except ValidationError as e:
     print(e.json())
 

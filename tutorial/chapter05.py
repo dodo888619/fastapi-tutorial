@@ -39,14 +39,12 @@ class CommonQueryParams:
 
 
 @app05.get("/classes_as_dependencies")
-# async def classes_as_dependencies(commons: CommonQueryParams = Depends(CommonQueryParams)):
-# async def classes_as_dependencies(commons: CommonQueryParams = Depends()):
 async def classes_as_dependencies(commons=Depends(CommonQueryParams)):
     response = {}
     if commons.q:
-        response.update({"q": commons.q})
+        response["q"] = commons.q
     items = fake_items_db[commons.page: commons.page + commons.limit]
-    response.update({"items": items})
+    response["items"] = items
     return response
 
 
@@ -58,9 +56,7 @@ def query(q: Optional[str] = None):
 
 
 def sub_query(q: str = Depends(query), last_query: Optional[str] = None):
-    if not q:
-        return last_query
-    return q
+    return last_query if not q else q
 
 
 @app05.get("/sub_dependency")

@@ -50,7 +50,7 @@ fake_users_db = {
 
 
 def fake_hash_password(password: str):
-    return "fakehashed" + password
+    return f"fakehashed{password}"
 
 
 class User(BaseModel):
@@ -71,7 +71,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect username or password")
     user = UserInDB(**user_dict)
     hashed_password = fake_hash_password(form_data.password)
-    if not hashed_password == user.hashed_password:
+    if hashed_password != user.hashed_password:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect username or password")
     return {"access_token": user.username, "token_type": "bearer"}
 
@@ -83,19 +83,18 @@ def get_user(db, username: str):
 
 
 def fake_decode_token(token: str):
-    user = get_user(fake_users_db, token)
-    return user
+    return get_user(fake_users_db, token)
 
 
 async def get_current_user(token: str = Depends(oauth2_schema)):
-    user = fake_decode_token(token)
-    if not user:
+    if user := fake_decode_token(token):
+        return user
+    else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},  # OAuth2的规范，如果认证失败，请求头中返回“WWW-Authenticate”
         )
-    return user
 
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
@@ -149,12 +148,16 @@ def jwt_get_user(db, username: str):
 
 
 def jwt_authenticate_user(db, username: str, password: str):
-    user = jwt_get_user(db=db, username=username)
-    if not user:
+    if user := jwt_get_user(db=db, username=username):
+        return (
+            False
+            if not verity_password(
+                plain_password=password, hashed_password=user.hashed_password
+            )
+            else user
+        )
+    else:
         return False
-    if not verity_password(plain_password=password, hashed_password=user.hashed_password):
-        return False
-    return user
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -163,9 +166,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(claims=to_encode, key=SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    to_encode["exp"] = expire
+    return jwt.encode(claims=to_encode, key=SECRET_KEY, algorithm=ALGORITHM)
 
 
 @app06.post("/jwt/token", response_model=Token)

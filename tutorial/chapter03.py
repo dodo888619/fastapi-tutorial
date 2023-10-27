@@ -55,9 +55,7 @@ def path_params_validate(
 
 @app03.get("/query")
 def page_limit(page: int = 1, limit: Optional[int] = None):  # 给了默认值就是选填的参数，没给默认值就是必填参数
-    if limit:
-        return {"page": page, "limit": limit}
-    return {"page": page}
+    return {"page": page, "limit": limit} if limit else {"page": page}
 
 
 @app03.get("/query/bool/conversion")  # bool类型转换：yes on 1 True true会转换成true, 其它为false
